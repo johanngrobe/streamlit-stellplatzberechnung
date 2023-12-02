@@ -2,10 +2,10 @@
 # $ conda create --name <env> --file <this file>
 # platform: win-64
 decimal
-geopandas=0.12.2=pypi_0
+geopandas
 math
-numpy=1.24.4=py311h0b4df5a_0
-pandas=1.5.3=pypi_0
-plotly=5.17.0=pyhd8ed1ab_0
-# python=3.11.6=h2628c8c_0_cpython
-streamlit=1.29.0=pyhd8ed1ab_0
+numpy
+pandas
+plotly
+python==3.11.6
+streamlit
