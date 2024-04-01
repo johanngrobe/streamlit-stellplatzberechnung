@@ -1,0 +1,5 @@
+smtp_server = "smtp.office365.com"
+smtp_port = "587"
+smtp_username = "j.grobe@namowo.de"
+smtp_password = "dcEeJJrFa4aAACZpVs*f8PrNxH@AgYVA"
+recipient_email = "stellplatztool@namowo.de"

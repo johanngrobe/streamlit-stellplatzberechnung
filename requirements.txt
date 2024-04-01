@@ -1,10 +1,10 @@
-# This file may be used to create an environment using:
-# $ conda create --name <env> --file <this file>
-# platform: win-64
+e-mail-validator
+folium
 geopandas
 geopy
 numpy
 pandas
-plotly
-# python==3.11.6
+# plotly
+smtplib
 streamlit
+streamlit-folium

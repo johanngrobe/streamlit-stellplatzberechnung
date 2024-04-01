@@ -1,0 +1,105 @@
+#########################################################################
+#                   STREAMLIT CONTACT FORM TEMPLATE                     #
+# Version: 0.2.0                                                        #
+# License: MIT License (https://opensource.org/license/mit/)            #
+# Author: João L. Neto (https://github.com/jlnetosci/)                  #
+# Release date: 2023-11-07                                              #
+# Documentation: https://github.com/jlnetosci/streamlit-contact-form    #
+# Credit is not mandatory, but it is kindly appreciated.                #
+# For a subtle link to github you may just uncomment the last line.     #
+#########################################################################
+
+import streamlit as st
+import smtplib
+import random
+import os
+import time
+import datetime
+
+from email_validator import validate_email, EmailNotValidError
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from io import BytesIO
+from PIL import Image
+from streamlit_js_eval import streamlit_js_eval
+import src.smtp as smtp
+
+## Page configuration options
+st.set_page_config(layout="wide") # column widths set below are dependent on the layout being set to wide
+
+## Load secrets.toml variables
+options = os.getenv(smtp.smtp_server)
+server = os.getenv(smtp.smtp_server)
+port = os.getenv(smtp.smtp_port)
+username = os.getenv(smtp.smtp_username)
+password = os.getenv(smtp.smtp_password)
+recipient = os.getenv(smtp.recipient_email)
+
+
+## Contact Form
+st.header("✉️ Contact Form")
+
+# col1, col2, col3, col4 =  st.columns([3, 0.25, 1, 0.25]) # column widths for a balanced distribution of elements in the page
+
+# ## Contact form
+# with col1: # left side of the layout
+email = st.text_input("**Ihre E-Mail-Addresse***", value=st.session_state.get('email', ''), key='email') # input widget for contact email
+message = st.text_area("**Ihre Nachricht***", value=st.session_state.get('message', ''), key='message') # input widget for message
+
+st.markdown('<p style="font-size: 13px;">*Notwendige Angabe</p>', unsafe_allow_html=True) # indication to user that both fields must be filled
+
+if st.button("Senden", type="primary"):
+    if not email or not message:
+        st.error("Bitte füllen Sie alle Felder aus.") # error for any blank field
+    else:
+        try:
+            # Robust email validation
+            valid = validate_email(email, check_deliverability=True)
+            # Email configuration - **IMPORTANT**: for security these details should be present in the "Secrets" section of Streamlit
+
+            # Create an SMTP connection
+            server = smtplib.SMTP(server, port)
+            server.starttls()
+            server.login(username, password)
+
+            # Compose the email message
+            subject = "Neue Stadt für das Stellplatztool" # subject of the email you will receive upon contact.
+            body = f"Email: {email}\nMessage: {message}"
+            msg = MIMEMultipart()
+            msg['From'] = username
+            msg['To'] = recipient
+            msg['Subject'] = subject
+            msg.attach(MIMEText(body, 'plain'))
+
+            # Send the email
+            server.sendmail(username, recipient, msg.as_string())
+
+            # Send the confirmation email to the message sender # If you do not want to send a confirmation email leave this section commented
+            current_datetime = datetime.datetime.now()
+            formatted_datetime = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+            confirmation_subject = f"Bestätigung der Benachrichtgung ({formatted_datetime})"
+            confirmation_body = f"Vielen Dank für ihre Interesse an unserem Stellplatztool. \n\nYour message: {message}"
+            confirmation_msg = MIMEMultipart()
+            confirmation_msg['From'] = username
+            confirmation_msg['To'] = email  # Use the sender's email address here
+            confirmation_msg['Subject'] = confirmation_subject
+            confirmation_msg.attach(MIMEText(confirmation_body, 'plain'))
+            server.sendmail(username, email, confirmation_msg.as_string())
+
+            # Close the SMTP server connection
+            server.quit()
+
+            st.success("Sent successfully!") # Success message to the user.
+            
+            #### NOTE FOR DEVELOPERS: UPON DEPLOYMENT DELETE THE SECTION BELOW ####
+            # st.info("""This would have been a message sent successfully!  
+            # For more information on activating the contact form, please check the [documentation](https://github.com/jlnetosci/streamlit-contact-form).""") # Please delete this info box if you have the contact form setup correctly.
+
+            # time.sleep(3)
+            # streamlit_js_eval(js_expressions="parent.window.location.reload()")
+
+
+        except EmailNotValidError as e:
+            st.error(f"Invalid email address. {e}") # error in case any of the email validation checks have not passed
+
+#st.markdown(f'<div style="position: fixed; bottom: 0; width: 100%; "><p style="text-align: left; color: #a3a0a3; margin-bottom: 28px; font-size: 11px;"><a href="https://github.com/jlnetosci/streamlit-contact-form" target="_blank" style="color: inherit;">Base template</a> by: <a href="https://github.com/jlnetosci" target="_blank" style="color: inherit;">João L. Neto</a></p></div>', unsafe_allow_html=True)
