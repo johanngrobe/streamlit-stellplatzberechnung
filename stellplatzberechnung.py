@@ -22,7 +22,7 @@ from src.origin import geocode_address
 from src.kosten import kostenberechnung, ersparnis
 from src.kontakt import kontakt, stadt_todo, stadt_fehlt
 
-locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8')
+locale.setlocale(locale.LC_ALL, 'de_DE')
 
 
 st.title('namowo Standortcheck')
