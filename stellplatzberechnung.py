@@ -12,15 +12,21 @@ import smtplib
 import os
 import datetime
 import random
+import locale
 from email_validator import validate_email, EmailNotValidError
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import src.smtp as smtp
 from src.mainz import *
 from src.origin import geocode_address
+from src.kosten import kostenberechnung, ersparnis
+from src.kontakt import kontakt, stadt_todo, stadt_fehlt
+
+locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8')
 
 
-st.title('Stellplatzsatzung - Potentialanalyse')
+st.title('namowo Standortcheck')
+st.markdown('### Berechnen Sie den Stellplatzbedarf für Ihre Immobilie')
 
 ## Load secrets.toml variables
 options = os.getenv(smtp.smtp_server)
@@ -36,6 +42,9 @@ if 'submit_standort' not in st.session_state:
 if 'submit_daten' not in st.session_state:
     st.session_state['submit_daten'] = False
 
+if 'submit_anteiL_stpl' not in st.session_state:
+    st.session_state['submit_anteiL_stpl'] = False
+
 if 'addresse' not in st.session_state:
     st.session_state['addresse'] = None
 
@@ -44,6 +53,7 @@ if 'stadt' not in st.session_state:
 
 with st.form("Standort ihrer Immobilie"):
     st.write("### Bitte geben Sie den Standort Ihrer Immobilie an")
+    st.write("Hinaweis: Derzeit funktionieren nur Adressen in Mainz. Die Städte Bonn, Essen, Köln, Frankfurt am Main, Mönchengladbach und Oberursel folgen in Kürze.")
     col1, col2 = st.columns([0.7, 0.3])
     with col1:
         strasse = st.text_input(label="Straße*", placeholder="Straße",)
@@ -51,7 +61,7 @@ with st.form("Standort ihrer Immobilie"):
         hausnummer = st.text_input(label="Hausnummer", placeholder="Hausnummer")
     col1, col2 = st.columns([0.3, 0.7])
     with col1:
-        plz = st.text_input(label="PLZ", max_chars=5, placeholder="PLZ")
+        plz = st.text_input(label="PLZ*", max_chars=5, placeholder="PLZ")
     with col2:
         stadt = st.text_input(label="Ort*", placeholder="Ort")
     st.markdown('<p style="font-size: 13px;">*Pflichtfelder</p>', unsafe_allow_html=True) # indication to user that both fields must be filled
@@ -82,81 +92,84 @@ if st.session_state.submit_standort:
 
     if  stadt_check.empty:
         st.session_state.stadt = None
-        st.error("Die Stadt ist nicht implementiert. Kontaktieren Sie uns gerne für eine Implementierung.")
-        with st.container(border=True):
-            email = st.text_input("**Ihre E-Mail-Addresse***", value=st.session_state.get('email', ''), key='email') # input widget for contact email
-            message = st.text_area("**Ihre Nachricht***", value=st.session_state.get('message', ''), key='message') # input widget for message
+        stadt_fehlt(stadt)
+        # with st.container(border=True):
+        #     email = st.text_input("**Ihre E-Mail-Addresse***", value=st.session_state.get('email', ''), key='email') # input widget for contact email
+        #     message = st.text_area("**Ihre Nachricht***", value=st.session_state.get('message', ''), key='message') # input widget for message
 
-            st.markdown('<p style="font-size: 13px;">*Pflichtfelder</p>', unsafe_allow_html=True) # indication to user that both fields must be filled
+        #     st.markdown('<p style="font-size: 13px;">*Pflichtfelder</p>', unsafe_allow_html=True) # indication to user that both fields must be filled
 
-            if st.button("Senden", type="primary"):
-                if not email or not message:
-                    st.error("Bitte füllen Sie alle Felder aus.") # error for any blank field
-                else:
-                    try:
-                        # Robust email validation
-                        valid = validate_email(email, check_deliverability=True)
-                        # Email configuration - **IMPORTANT**: for security these details should be present in the "Secrets" section of Streamlit
+        #     if st.button("Senden", type="primary"):
+        #         if not email or not message:
+        #             st.error("Bitte füllen Sie alle Felder aus.") # error for any blank field
+        #         else:
+        #             try:
+        #                 # Robust email validation
+        #                 valid = validate_email(email, check_deliverability=True)
+        #                 # Email configuration - **IMPORTANT**: for security these details should be present in the "Secrets" section of Streamlit
 
-                        # Create an SMTP connection
-                        server = smtplib.SMTP(server, port)
-                        server.starttls()
-                        server.login(username, password)
+        #                 # Create an SMTP connection
+        #                 server = smtplib.SMTP(server, port)
+        #                 server.starttls()
+        #                 server.login(username, password)
 
-                        # Compose the email message
-                        subject = "Neue Stadt für das Stellplatztool" # subject of the email you will receive upon contact.
-                        body = f"Email: {email}\nMessage: {message}"
-                        msg = MIMEMultipart()
-                        msg['From'] = username
-                        msg['To'] = recipient
-                        msg['Subject'] = subject
-                        msg.attach(MIMEText(body, 'plain'))
+        #                 # Compose the email message
+        #                 subject = "Neue Stadt für das Stellplatztool" # subject of the email you will receive upon contact.
+        #                 body = f"Email: {email}\nMessage: {message}"
+        #                 msg = MIMEMultipart()
+        #                 msg['From'] = username
+        #                 msg['To'] = recipient
+        #                 msg['Subject'] = subject
+        #                 msg.attach(MIMEText(body, 'plain'))
 
-                        # Send the email
-                        server.sendmail(username, recipient, msg.as_string())
+        #                 # Send the email
+        #                 server.sendmail(username, recipient, msg.as_string())
 
-                        # Send the confirmation email to the message sender # If you do not want to send a confirmation email leave this section commented
-                        current_datetime = datetime.datetime.now()
-                        formatted_datetime = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
-                        confirmation_subject = f"Bestätigung der Benachrichtgung ({formatted_datetime})"
-                        confirmation_body = f"Vielen Dank für ihre Interesse an unserem Stellplatztool. \n\nYour message: {message}"
-                        confirmation_msg = MIMEMultipart()
-                        confirmation_msg['From'] = username
-                        confirmation_msg['To'] = email  # Use the sender's email address here
-                        confirmation_msg['Subject'] = confirmation_subject
-                        confirmation_msg.attach(MIMEText(confirmation_body, 'plain'))
-                        server.sendmail(username, email, confirmation_msg.as_string())
+        #                 # Send the confirmation email to the message sender # If you do not want to send a confirmation email leave this section commented
+        #                 current_datetime = datetime.datetime.now()
+        #                 formatted_datetime = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        #                 confirmation_subject = f"Bestätigung der Benachrichtgung ({formatted_datetime})"
+        #                 confirmation_body = f"Vielen Dank für ihre Interesse an unserem Stellplatztool. \n\nYour message: {message}"
+        #                 confirmation_msg = MIMEMultipart()
+        #                 confirmation_msg['From'] = username
+        #                 confirmation_msg['To'] = email  # Use the sender's email address here
+        #                 confirmation_msg['Subject'] = confirmation_subject
+        #                 confirmation_msg.attach(MIMEText(confirmation_body, 'plain'))
+        #                 server.sendmail(username, email, confirmation_msg.as_string())
 
-                        # Close the SMTP server connection
-                        server.quit()
+        #                 # Close the SMTP server connection
+        #                 server.quit()
 
-                        st.success("Erfolgreich versendet") # Success message to the user.
+        #                 st.success("Erfolgreich versendet") # Success message to the user.
                         
-                        #### NOTE FOR DEVELOPERS: UPON DEPLOYMENT DELETE THE SECTION BELOW ####
-                        # st.info("""This would have been a message sent successfully!  
-                        # For more information on activating the contact form, please check the [documentation](https://github.com/jlnetosci/streamlit-contact-form).""") # Please delete this info box if you have the contact form setup correctly.
+        #                 #### NOTE FOR DEVELOPERS: UPON DEPLOYMENT DELETE THE SECTION BELOW ####
+        #                 # st.info("""This would have been a message sent successfully!  
+        #                 # For more information on activating the contact form, please check the [documentation](https://github.com/jlnetosci/streamlit-contact-form).""") # Please delete this info box if you have the contact form setup correctly.
 
-                        # time.sleep(3)
-                        # streamlit_js_eval(js_expressions="parent.window.location.reload()")
+        #                 # time.sleep(3)
+        #                 # streamlit_js_eval(js_expressions="parent.window.location.reload()")
 
 
-                    except EmailNotValidError as e:
-                        st.error(f"E-Mail Adresse nicht korrekt: {e}") # error in case any of the email validation checks have not passed
+        #             except EmailNotValidError as e:
+        #                 st.error(f"E-Mail Adresse nicht korrekt: {e}") # error in case any of the email validation checks have not passed
     else:
-        st.session_state.stadt = stadt_check.name.iloc[0]
+        st.session_state.stadt = stadt_check
 
-if st.session_state.stadt:
-    if st.session_state.stadt == "Mainz":
+if st.session_state.stadt is not None:
+    # st.dataframe(st.session_state.stadt[['name', 'lage_bonus']])
+    if st.session_state.stadt.name.iloc[0] == "Mainz":
         with st.form("Eingabe von relevanten Daten"):
             st.write("### Bitte machen Sie weitere Angaben zur Immobilie")
             # Wohnungen
             # wohnungen = st.text_input(label="Wohnungsgrößen in qm getrennt durch Komma")
             col1, col2 = st.columns(2)
             with col1:
-                anzahl_wohnungen = st.number_input(label="Anzahl der Wohnungen", value=None, min_value=0, step=1, placeholder="")
+                anzahl_wohnungen = st.number_input(label="Anzahl der Wohnungen", value=0, min_value=0, step=1, placeholder="")
             with col2:
                 # Gewerbefläche
-                gewerbeflaeche = st.number_input(label="Gewerbefläche in m\u00b2", value=None, min_value=0,step=1, placeholder="")
+                gewerbeflaeche = st.number_input(label="Gewerbefläche in m\u00b2", value=0, min_value=0,step=1, placeholder="")
+
+            input_unterirdische_stpl = st.number_input(label="Anteil unterirdischer Stellplätze in % (z. B. Tiefgarage)", value=50, min_value=0, max_value=100, step=1)
 
             # Gewerbebesucherverkehr
             # gewerbe_besucherverkehr = st.checkbox(label="Erhöhter Gewerbebesucherverkehr")
@@ -170,63 +183,70 @@ if st.session_state.stadt:
             # Every form must have a submit button.
             st.session_state.submit_daten = st.form_submit_button("Eingabe bestätigen")
 
+            
+        if st.session_state.submit_daten:
+
+            # wohnungen = wohnungen.split(',')
+            # wohnungen = [float(i) for i in wohnungen]
+            wohnungen = random.sample(range(50, 100), anzahl_wohnungen)
+            wohnungen = pd.DataFrame(wohnungen, columns=['Größe'])
             try:
-                if st.session_state.submit_daten:
+            # Berechnung
+                pkw, fahrrad, wohnung = mainz(wohnungen, gewerbeflaeche, gewerbe_besucherverkehr, f_gewerbe_pkw)
+            except:
+                st.error("Fehler bei Stellplatzberechnung")                
+            # st.dataframe(pkw)
+            pkw_nach_satzung = int(pkw.T['Gesamt'][1])
+            st.markdown(f"#### Pkw-Stellplätze gemäß Stellplatzsatzung: {pkw_nach_satzung}")
 
-                # wohnungen = wohnungen.split(',')
-                # wohnungen = [float(i) for i in wohnungen]
-                    wohnungen = random.sample(range(50, 100), anzahl_wohnungen)
-                    wohnungen = pd.DataFrame(wohnungen, columns=['Größe'])
+            st.write("### Mögliche Ersparnisse durch namowo")
+            
+            try:
+                kosten_gesamt = kostenberechnung(pkw_nach_satzung, input_unterirdische_stpl)
 
-                    # Berechnung
-                    pkw, fahrrad, wohnung = mainz(wohnungen, gewerbeflaeche, gewerbe_besucherverkehr, f_gewerbe_pkw)
-                    
-                    # st.dataframe(pkw)
-                    pkw_ohne_moko = int(pkw.T['Gesamt'][1])
-                    # st.write(f"Pkw-Stellplätze ohne Mobilitätskonzept: {pkw_ohne_moko}")
-                    # st.dataframe(fahrrad)
-                    # st.write(f"Fahrradstellplätze ohne Mobilitätskonzept: {fahrrad.T['Gesamt'][1]}")
+                oev_bonus = st.session_state.stadt['lage_bonus'].iloc[0] /100
 
-                    st.write("### Mögliche Ersparnis durch namowo")
+                unquali_moko = 0.1
+                quali_moko = 0.3
 
-                    oev_bonus = gpd.read_file('data/mainz_oev_bonus.geojson')
-                    reduzierung_oev_bonus = sjoin(oev_bonus, st.session_state.addresse, how='right')['Reduzierung'].iloc[0]
-                    unqualifiziertes_moko = 10
-                    qualifiziertes_moko = 30
-                    kosten_stellplatz = 30000
+                ergebnis_oev_bonus = mainz_moko(pkw, oev_bonus, 0)
+                # st.dataframe(ergebnis_oev_bonus)
+                pkw_oev_bonus = ergebnis_oev_bonus.iloc[0]
+                # st.write(pkw_oev_bonus)
+                einsparung_oev_bonus = pkw_nach_satzung - pkw_oev_bonus
+                einsparung_prozent_oev_bonus = einsparung_oev_bonus / pkw_nach_satzung * 100
 
-                    ergebnis_unqualifiziertes_moko = mainz_moko(pkw, reduzierung_oev_bonus/100, unqualifiziertes_moko/100)
-                    pkw_unqualifiziertes_moko = ergebnis_unqualifiziertes_moko.iloc[0]
-                    einsparung_unqualifiziertes_moko = pkw_ohne_moko - pkw_unqualifiziertes_moko
-                    einsparung_prozent_unqualifiziertes_moko = einsparung_unqualifiziertes_moko / pkw_ohne_moko * 100
+                kosten_oev_bonus = kostenberechnung(pkw_oev_bonus, input_unterirdische_stpl)
+                ersparnis_oev_bonus, ersparing_oev_bonus_prozent = ersparnis(kosten_gesamt, kosten_oev_bonus)
+                
+                ergebnis_unquali_moko = mainz_moko(pkw, oev_bonus, unquali_moko)
+                pkw_unquali_moko = ergebnis_unquali_moko.iloc[0]
+                einsparung_unquali_moko = pkw_nach_satzung - pkw_unquali_moko
+                einsparung_prozent_unquali_moko = einsparung_unquali_moko / pkw_nach_satzung * 100
 
-                    einsparung_kosten_unqualifiziertes_moko = einsparung_unqualifiziertes_moko * kosten_stellplatz
+                kosten_unquali_moko = kostenberechnung(pkw_unquali_moko, input_unterirdische_stpl)
+                ersparnis_unquali_moko = kosten_gesamt - kosten_unquali_moko
+
+                ergebnis_quali_moko = mainz_moko(pkw, oev_bonus, quali_moko)
+                pkw_quali_moko = ergebnis_quali_moko.iloc[0]
+                einsparung_quali_moko = pkw_nach_satzung - pkw_quali_moko
+                einsparung_prozent_quali_moko = einsparung_quali_moko / pkw_nach_satzung * 100
+                kosten_quali_moko = kostenberechnung(pkw_quali_moko, input_unterirdische_stpl)
+                ersparnis_quali_moko, ersparnis_quali_moko_prozent = ersparnis(kosten_gesamt, kosten_quali_moko)
 
 
-                    ergebnis_qualifiziertes_moko = mainz_moko(pkw, reduzierung_oev_bonus/100, qualifiziertes_moko/100)
-                    pkw_qualifiziertes_moko = ergebnis_qualifiziertes_moko.iloc[0]
-                    einsparung_qualifiziertes_moko = pkw_ohne_moko - pkw_qualifiziertes_moko
-                    einsparung_prozent_qualifiziertes_moko = einsparung_qualifiziertes_moko / pkw_ohne_moko * 100
-                    einsparung_kosten_qualifiziertes_moko = einsparung_qualifiziertes_moko * kosten_stellplatz
+                st.markdown(f"""
+                        |                                                        | Einsparung in €*       | eingesparte Pkw-Stellplätze|
+                        |--------------------------------------------------------|:----------------------:|:--------------------------:|
+                        |Mit ÖV-Bonus nach Stellplatzsatzung                     |{f"{ersparnis_oev_bonus:n}"}    |   {f"{einsparung_oev_bonus:n}"}|
+                        |Mobilitätscheck<br>(Unqualifiziertes Mobilitätskonzept) | {f"{ersparnis_unquali_moko:n}"} | {f"{einsparung_unquali_moko:n}"}
+                        |Qualifiziertes Mobilitätskonzept                        | {f"{ersparnis_quali_moko:n}"}| {f"{einsparung_quali_moko:n}"}
+                        """, unsafe_allow_html=True)
+                st.write(r"$\textsf{\footnotesize * Annahme: Kosten pro unterirgendeen Stellplatz 47.000 €, oberirdischer Stellplatz 3.300 €}$")
 
-                    st.markdown(f"""
-                            |                        | Einsparung in €* | eingesparte Pkw-Stellplätze|
-                            |------------------------|:----------------:|:--------------------------:|
-                            |Genäß Stellplatzsatzung | ❌           |            ❌             |
-                            |Mobilitätscheck<br>(Unqualifiziertes Mobilitätskonzept) | {int(einsparung_kosten_unqualifiziertes_moko)} | {int(einsparung_unqualifiziertes_moko)}
-                            |Qualifiziertes Mobilitätskonzept |{int(einsparung_kosten_qualifiziertes_moko)} | {int(einsparung_qualifiziertes_moko)}
+                kontakt()
 
-                            * Annahme: Kosten pro Stellplatz 30.000 €
-                            
-                            """, unsafe_allow_html=True)
-                    st.write("Kontaktieren Sie uns gerne für einen Mobilitscheck oder eine individuelle Beratung.")
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.link_button(url="https://outlook.office365.com/owa/calendar/Kennenlernen@namowo.de/bookings/", label="Termin vereinbaren", type="primary")
-                    with col2:
-                        st.link_button(url="mailto:info@namowo.de", label="E-Mail senden", type="primary")
-
-                    st.write("Bitte beachten Sie, dass die Ersparnis durch den Mobilitätscheck nur eine Schätzung ist und keine rechtliche Verbindlichkeit darstellt.")
+                st.write("Bitte beachten Sie, dass die berechnete Ersparnis nur eine Schätzung ist und keine rechtliche Verbindlichkeit darstellt.")
             except:
                 st.error("Bitte machen Sie Angaben zur Immobilie.")
 
@@ -266,19 +286,20 @@ if st.session_state.stadt:
                 #     ergebnis_moko = mainz_moko(pkw, reduzierung_oev_bonus/100, reduzierung_moko/100)
 
                 #     st.dataframe(ergebnis_moko)
-    elif st.session_state.stadt == "Köln":
-        st.write("TODO")
+    elif st.session_state.stadt.name.iloc[0] == "Essen":
+        stadt_todo()
 
+    elif st.session_state.stadt.name.iloc[0] == "Köln":
+        stadt_todo()
 
+    elif st.session_state.stadt.name.iloc[0] == "Frankfurt am Main":
+        stadt_todo()
 
+    elif st.session_state.stadt.name.iloc[0] == "Mönchengladbach":
+        stadt_todo()
 
+    elif st.session_state.stadt.name.iloc[0] == "Oberursel":
+        stadt_todo()
 
-
-    elif st.session_state.stadt == "Frankfurt am Main":
-        st.write("TODO")
-
-
-
-
-    elif st.session_state.stadt == "Berlin":
-        st.write("In Berlin gibt es keine Stellplatzsatzung. Bitte kontaktieren Sie uns für eine individuelle Beratung.")
+    else:
+        stadt_fehlt(stadt)

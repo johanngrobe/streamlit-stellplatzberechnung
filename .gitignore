@@ -1,0 +1,4 @@
+src/smtp.py
+*.zip
+*.gpkg
+*.qmd
