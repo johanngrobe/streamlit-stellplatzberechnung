@@ -53,7 +53,7 @@ if 'stadt' not in st.session_state:
 
 with st.form("Standort ihrer Immobilie"):
     st.write("### Bitte geben Sie den Standort Ihrer Immobilie an")
-    st.write("Hinaweis: Derzeit funktionieren nur Adressen in Mainz. Die Städte Bonn, Essen, Köln, Frankfurt am Main, Mönchengladbach und Oberursel folgen in Kürze.")
+    st.write("Hinweis: Derzeit funktionieren nur Adressen in Mainz. Die Städte Bonn, Essen, Köln, Frankfurt am Main, Mönchengladbach und Oberursel folgen in Kürze.")
     col1, col2 = st.columns([0.7, 0.3])
     with col1:
         strasse = st.text_input(label="Straße*", placeholder="Straße",)
@@ -242,7 +242,7 @@ if st.session_state.stadt is not None:
                         |Mobilitätscheck<br>(Unqualifiziertes Mobilitätskonzept) | {f"{ersparnis_unquali_moko:n}"} | {f"{einsparung_unquali_moko:n}"}
                         |Qualifiziertes Mobilitätskonzept                        | {f"{ersparnis_quali_moko:n}"}| {f"{einsparung_quali_moko:n}"}
                         """, unsafe_allow_html=True)
-                st.write(r"$\textsf{\footnotesize * Annahme: Kosten pro unterirgendeen Stellplatz 47.000 €, oberirdischer Stellplatz 3.300 €}$")
+                st.write(r"$\textsf{\footnotesize * Annahme: Kosten pro unterirdischer Stellplatz 47.000 €, oberirdischer Stellplatz 3.300 €}$")
 
                 kontakt()
 

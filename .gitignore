@@ -2,3 +2,4 @@ src/smtp.py
 *.zip
 *.gpkg
 *.qmd
+*.7z
