@@ -25,8 +25,14 @@ from src.kontakt import kontakt, stadt_todo, stadt_fehlt
 locale.setlocale(locale.LC_ALL, 'de_DE')
 
 
-st.title('namowo Standortcheck')
+st.title('namowo Standortcheck (Alpha)')
 st.markdown('### Berechnen Sie den Stellplatzbedarf für Ihre Immobilie')
+
+col1, col2 = st.columns([0.8, 0.2])
+with col1:
+    st.write('Dies ist eine Light-Version. Haben Sie Interesse an einer Vollversion des Standortschecks mit detaillierten Stellplatzberechnungen? Kontaktieren Sie uns!')
+with col2:
+    st.link_button(url=f"mailto:standortcheck@namowo.de?subject=Erweiterte%20Version%20des%20Standortchecks&body=Liebes%20namowo-Team%2C%0A%0Aich%20habe%20Interesse%20an%20einer%20erweiterten%20Version%20des%20Standortchecks.%0A%0AMit%20freundlichen%20Gr%C3%BC%C3%9Fen", label="E-Mail senden", type="primary")
 
 ## Load secrets.toml variables
 options = os.getenv(smtp.smtp_server)
@@ -53,7 +59,7 @@ if 'stadt' not in st.session_state:
 
 with st.form("Standort ihrer Immobilie"):
     st.write("### Bitte geben Sie den Standort Ihrer Immobilie an")
-    st.write("Hinweis: Derzeit funktionieren nur Adressen in Mainz. Die Städte Bonn, Essen, Köln, Frankfurt am Main, Mönchengladbach und Oberursel folgen in Kürze.")
+    st.write("Hinweis: Derzeit funktionieren nur Adressen in Mainz.")
     col1, col2 = st.columns([0.7, 0.3])
     with col1:
         strasse = st.text_input(label="Straße*", placeholder="Straße",)
