@@ -1,9 +1,9 @@
 email-validator
-folium
+# folium
 geopandas
 geopy
 numpy
 pandas
 # plotly
 streamlit
-streamlit-folium
+# streamlit-folium

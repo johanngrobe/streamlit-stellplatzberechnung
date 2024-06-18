@@ -5,8 +5,8 @@ import geopandas as gpd
 from geopandas.tools import sjoin, geocode
 # import plotly.express as px
 import streamlit as st
-from streamlit_folium import st_folium
-import folium
+# from streamlit_folium import st_folium
+# import folium
 import streamlit as st
 import smtplib
 import os
@@ -32,7 +32,7 @@ col1, col2 = st.columns([0.8, 0.2])
 with col1:
     st.write('Dies ist eine Light-Version. Haben Sie Interesse an einer Vollversion des Standortschecks mit detaillierten Stellplatzberechnungen? Kontaktieren Sie uns!')
 with col2:
-    st.link_button(url=f"mailto:standortcheck@namowo.de?subject=Erweiterte%20Version%20des%20Standortchecks&body=Liebes%20namowo-Team%2C%0A%0Aich%20habe%20Interesse%20an%20einer%20erweiterten%20Version%20des%20Standortchecks.%0A%0AMit%20freundlichen%20Gr%C3%BC%C3%9Fen", label="E-Mail senden", type="primary")
+    st.link_button(url="mailto:standortcheck@namowo.de?subject=Erweiterte%20Version%20des%20Standortchecks&body=Liebes%20namowo-Team%2C%0A%0Aich%20habe%20Interesse%20an%20einer%20erweiterten%20Version%20des%20Standortchecks.%0A%0AMit%20freundlichen%20Gr%C3%BC%C3%9Fen", label="E-Mail senden", type="primary")
 
 ## Load secrets.toml variables
 options = os.getenv(smtp.smtp_server)
